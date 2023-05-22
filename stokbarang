@@ -1,0 +1,202 @@
+package uas;
+import java.awt.Color;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.*;
+import javax.swing.*;
+
+public class UAS extends JFrame implements ActionListener {
+    //variabel
+    JLabel labkode = new JLabel("Kode Barang");
+    JTextField tfkode = new JTextField("");
+    JLabel labcari = new JLabel("Cari Barang");
+    JTextField tfcari = new JTextField("");
+    JLabel labnama = new JLabel("Nama Barang");
+    JTextField tfnama = new JTextField("");
+    JLabel labharga = new JLabel("Harga");
+    JTextField tfharga = new JTextField("");
+    JLabel labjenis = new JLabel("Jenis");
+    String[] items = {"Baru", "Second"};
+    JComboBox<String> comjenis = new JComboBox<>(items);
+    JLabel labjumlah = new JLabel("Jumlah");
+    JTextField tfjumlah = new JTextField("");
+    JButton bsimpan = new JButton("Create");
+    JButton bupdate = new JButton("Update"); // Added button for update operation
+    JButton bdelete = new JButton("Delete"); // Added button for delete operation
+    JButton bcari = new JButton("Cari");
+    JLabel stokbarang = new JLabel("DAFTAR STOK YANG ADA");
+    JTextArea tampilandata = new JTextArea();
+    JScrollPane scrollPane = new JScrollPane(tampilandata);
+
+    //    tampilan
+    UAS() {
+        super("STOK BARANG");
+        setLocation(500, 200);
+        setSize(1000, 400);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(null);
+
+        add(labkode).setBounds(10, 10, 100, 30);
+        add(tfkode).setBounds(110, 10, 270, 30);
+        add(labcari).setBounds(440, 10, 100, 30);
+        add(tfcari).setBounds(530, 10, 300, 30);
+        add(bcari).setBounds(850, 10, 100, 30);
+        bcari.addActionListener(this);
+        add(stokbarang).setBounds(600, 55, 200, 30);
+        add(scrollPane).setBounds(445,80, 500, 260);
+        add(labnama).setBounds(10, 60, 100, 30);
+        add(tfnama).setBounds(110, 60, 270, 30);
+        add(labharga).setBounds(10, 110, 100, 30);
+        add(tfharga).setBounds(110, 110, 270, 30);
+        add(labjenis).setBounds(10, 160, 100, 30);
+        add(comjenis).setBounds(110, 160, 270, 30);
+        add(labjumlah).setBounds(10, 210, 100, 30);
+        add(tfjumlah).setBounds(110, 210, 270, 30);
+        add(bsimpan).setBounds(110, 260, 270, 30);
+        bsimpan.addActionListener(this);
+        add(bupdate).setBounds(110, 310, 120, 30);
+        bupdate.addActionListener(this);
+        add(bdelete).setBounds(260, 310, 120, 30);
+        bdelete.addActionListener(this);
+        
+        //warna
+        getContentPane().setBackground(Color.red);
+
+
+        setVisible(true);
+        setResizable(false);
+    }
+
+    public void actionPerformed(ActionEvent e) {
+        JButton btn = (JButton) e.getSource();
+        try {
+            String kodenya = tfkode.getText();
+            String carinya = tfcari.getText();
+            String namanya = tfnama.getText();
+            String harganya = tfharga.getText();
+            String jenisnya = (String) comjenis.getSelectedItem();
+            String jumlanya = tfjumlah.getText();
+            Class.forName("com.mysql.jdbc.Driver");
+            Connection konek = DriverManager.getConnection("jdbc:mysql://localhost/produk", "root", "");
+            Statement stat = konek.createStatement();
+            ResultSet res;
+            PreparedStatement pst;
+
+            // untuk simpan
+            if (btn == bsimpan) {
+                String sql = "SELECT kode FROM daftar_produk WHERE kode = '" + kodenya + "'";
+                pst = konek.prepareStatement(sql);
+                res = pst.executeQuery();
+                if (res.next()) {
+                    JOptionPane.showMessageDialog(null, "Data Sudah Ada");
+                } else {
+                    sql = "INSERT INTO daftar_produk (kode, nama_produk, harga, jenis, jumlah) VALUES ('" + kodenya + "', '" + namanya + "', '" + harganya + "', '" + jenisnya + "', '" + jumlanya + "')";
+                    stat.execute(sql);
+                    JOptionPane.showMessageDialog(null, "Data berhasil disimpan");
+                    tfkode.setText("");
+                    tfnama.setText("");
+                    tfharga.setText("");
+                    comjenis.setSelectedIndex(0);
+                    tfjumlah.setText("");
+                    displayAllData();
+                }
+                stat.close();
+                konek.close();
+
+                // untuk cari
+            } else if (btn == bcari) {
+                String sql = "SELECT * FROM daftar_produk WHERE kode LIKE '%" + carinya + "%'";
+                res = stat.executeQuery(sql);
+                StringBuilder result = new StringBuilder();
+                if (res.next()) {
+                    tfkode.setText(res.getString(1));
+                    tfnama.setText(res.getString(2));
+                    tfharga.setText(res.getString(3));
+                    comjenis.setSelectedItem(res.getString(4));
+                    tfjumlah.setText(res.getString(5));
+                } else {
+                    tampilandata.setText("Data tidak tersedia");
+                }
+                stat.close();
+                konek.close();
+
+                // untuk Update
+            } else if (btn == bupdate) {
+                String sql = "UPDATE daftar_produk SET nama_produk = ?, harga = ?, jenis = ?, jumlah = ? WHERE kode = ?";
+                pst = konek.prepareStatement(sql);
+                pst.setString(1, namanya);
+                pst.setString(2, harganya);
+                pst.setString(3, jenisnya);
+                pst.setString(4, jumlanya);
+                pst.setString(5, kodenya);
+                int rowsUpdated = pst.executeUpdate();
+                if (rowsUpdated > 0) {
+                    JOptionPane.showMessageDialog(null, "Data berhasil diupdate");
+                    tfkode.setText("");
+                    tfnama.setText("");
+                    tfharga.setText("");
+                    comjenis.setSelectedIndex(0);
+                    tfjumlah.setText("");
+                    displayAllData();
+                } else {
+                    JOptionPane.showMessageDialog(null, "Gagal mengupdate data");
+                }
+                pst.close();
+                konek.close();
+
+                // untuk Delete
+            } else if (btn == bdelete) {
+                String sql = "DELETE FROM daftar_produk WHERE kode = ?";
+                pst = konek.prepareStatement(sql);
+                pst.setString(1, kodenya);
+                int rowsDeleted = pst.executeUpdate();
+                if (rowsDeleted > 0) {
+                    JOptionPane.showMessageDialog(null, "Data berhasil dihapus");
+                    tfkode.setText("");
+                    tfnama.setText("");
+                    tfharga.setText("");
+                    comjenis.setSelectedIndex(0);
+                    tfjumlah.setText("");
+                    displayAllData();
+                } else {
+                    JOptionPane.showMessageDialog(null, "Gagal menghapus data");
+                }
+                pst.close();
+                konek.close();
+            }
+        } catch (Exception ex) {
+            System.out.println("Error: " + ex);
+        }
+    }
+
+    // untuk menampilkan data di text area  
+    public void displayAllData() {
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+            Connection konek = DriverManager.getConnection("jdbc:mysql://localhost/produk", "root", "");
+            Statement stat = konek.createStatement();
+            ResultSet res = stat.executeQuery("SELECT * FROM daftar_produk");
+
+            StringBuilder result = new StringBuilder();
+            while (res.next()) {
+                result.append("Kode: ").append(res.getString("kode")).append("\n");
+                result.append("Nama: ").append(res.getString("nama_produk")).append("\n");
+                result.append("Harga: ").append(res.getString("harga")).append("\n");
+                result.append("Jenis: ").append(res.getString("jenis")).append("\n");
+                result.append("Jumlah: ").append(res.getString("jumlah")).append("\n\n");
+            }
+
+            tampilandata.setText(result.toString());
+
+            stat.close();
+            konek.close();
+        } catch (Exception e) {
+            System.out.println("Error: " + e);
+        }
+    }
+
+    public static void main(String[] args) {
+        UAS uas = new UAS();
+        uas.displayAllData();
+    }
+}
